@@ -48,8 +48,8 @@ OusterDriver::OusterDriver(
   this->declare_parameter("proc_mask", std::string("IMG|PCL|IMU|SCAN"));
 
   // Declare parameters used across ALL _sensor_ implementations
-  this->declare_parameter("lidar_ip");
-  this->declare_parameter("computer_ip");
+  this->declare_parameter<std::string>("lidar_ip");
+  this->declare_parameter<std::string>("computer_ip");
   this->declare_parameter("imu_port", 7503);
   this->declare_parameter("lidar_port", 7502);
   this->declare_parameter("lidar_mode", std::string("512x10"));
@@ -70,17 +70,16 @@ void OusterDriver::onConfigure()
   // Get parameters used across ALL _sensor_ implementations. Parameters unique
   // a specific Sensor implementation are "getted" in the configure() function
   // for that sensor.
-  ros2_ouster::Configuration lidar_config;
-  lidar_config.imu_port = this->get_parameter("imu_port").as_int();
-  lidar_config.lidar_port = this->get_parameter("lidar_port").as_int();
-  lidar_config.lidar_mode = this->get_parameter("lidar_mode").as_string();
-  lidar_config.timestamp_mode = this->get_parameter("timestamp_mode").as_string();
+  _lidar_config.imu_port = this->get_parameter("imu_port").as_int();
+  _lidar_config.lidar_port = this->get_parameter("lidar_port").as_int();
+  _lidar_config.lidar_mode = this->get_parameter("lidar_mode").as_string();
+  _lidar_config.timestamp_mode = this->get_parameter("timestamp_mode").as_string();
 
   // Deliberately retrieve the IP parameters in a try block without defaults, as
   // we cannot estimate a reasonable default IP address for the LiDAR/computer.
   try {
-    lidar_config.lidar_ip = get_parameter("lidar_ip").as_string();
-    lidar_config.computer_ip = get_parameter("computer_ip").as_string();
+    _lidar_config.lidar_ip = get_parameter("lidar_ip").as_string();
+    _lidar_config.computer_ip = get_parameter("computer_ip").as_string();
   } catch (...) {
     RCLCPP_FATAL(
       this->get_logger(),
@@ -89,12 +88,12 @@ void OusterDriver::onConfigure()
     exit(-1);
   }
 
-  if (lidar_config.timestamp_mode == "TIME_FROM_ROS_RECEPTION") {
+  if (_lidar_config.timestamp_mode == "TIME_FROM_ROS_RECEPTION") {
     RCLCPP_WARN(
       this->get_logger(),
       "Using TIME_FROM_ROS_RECEPTION to stamp data with ROS time on "
       "reception. This has unmodelled latency!");
-    lidar_config.timestamp_mode = "TIME_FROM_INTERNAL_OSC";
+    _lidar_config.timestamp_mode = "TIME_FROM_INTERNAL_OSC";
     _use_ros_time = true;
   } else {
     _use_ros_time = false;
@@ -102,7 +101,7 @@ void OusterDriver::onConfigure()
 
   // Configure the driver and sensor
   try {
-    _sensor->configure(lidar_config, shared_from_this());
+    _sensor->configure(_lidar_config, shared_from_this());
   } catch (const OusterDriverException & e) {
     RCLCPP_FATAL(this->get_logger(), "Exception thrown: (%s)", e.what());
     exit(-1);
@@ -140,6 +139,17 @@ void OusterDriver::onConfigure()
 
 void OusterDriver::onActivate()
 {
+  try {
+    ouster::sensor::sensor_config sensor_config{
+      .operating_mode = ouster::sensor::OperatingMode::OPERATING_NORMAL
+      };
+    ouster::sensor::set_config(_lidar_config.lidar_ip, sensor_config, 0);
+    
+  } catch (const OusterDriverException & e) {
+    RCLCPP_FATAL(this->get_logger(), "Exception thrown: (%s)", e.what());
+    exit(-1);
+  }
+
   DataProcessorMapIt it;
   for (it = _data_processors.begin(); it != _data_processors.end(); ++it) {
     it->second->onActivate();
@@ -158,6 +168,17 @@ void OusterDriver::onError()
 
 void OusterDriver::onDeactivate()
 {
+  RCLCPP_INFO(this->get_logger(), "Going into standby mode");
+  try {
+    ouster::sensor::sensor_config sensor_config{
+      .operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY
+      };
+    ouster::sensor::set_config(_lidar_config.lidar_ip, sensor_config, 0);    
+  } catch (const OusterDriverException & e) {
+    RCLCPP_FATAL(this->get_logger(), "Exception thrown: (%s)", e.what());
+    exit(-1);
+  }
+
   _process_timer->cancel();
   _process_timer.reset();
 
@@ -252,14 +273,13 @@ void OusterDriver::resetService(
     return;
   }
 
-  ros2_ouster::Configuration lidar_config;
-  lidar_config.lidar_ip = get_parameter("lidar_ip").as_string();
-  lidar_config.computer_ip = get_parameter("computer_ip").as_string();
-  lidar_config.imu_port = get_parameter("imu_port").as_int();
-  lidar_config.lidar_port = get_parameter("lidar_port").as_int();
-  lidar_config.lidar_mode = get_parameter("lidar_mode").as_string();
-  lidar_config.timestamp_mode = get_parameter("timestamp_mode").as_string();
-  _sensor->reset(lidar_config, shared_from_this());
+  _lidar_config.lidar_ip = get_parameter("lidar_ip").as_string();
+  _lidar_config.computer_ip = get_parameter("computer_ip").as_string();
+  _lidar_config.imu_port = get_parameter("imu_port").as_int();
+  _lidar_config.lidar_port = get_parameter("lidar_port").as_int();
+  _lidar_config.lidar_mode = get_parameter("lidar_mode").as_string();
+  _lidar_config.timestamp_mode = get_parameter("timestamp_mode").as_string();
+  _sensor->reset(_lidar_config, shared_from_this());
 }
 
 void OusterDriver::getMetadata(

@@ -139,6 +139,7 @@ private:
   rclcpp::Service<ouster_msgs::srv::GetMetadata>::SharedPtr _metadata_srv;
 
   std::unique_ptr<SensorInterface> _sensor;
+  ros2_ouster::Configuration _lidar_config;
   std::multimap<ouster::sensor::client_state,
     std::unique_ptr<ros2_ouster::DataProcessorInterface>> _data_processors;
   rclcpp::TimerBase::SharedPtr _process_timer;
