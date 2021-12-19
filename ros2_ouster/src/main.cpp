@@ -23,6 +23,9 @@ int main(int argc, char ** argv)
 
   auto node = std::make_shared<ros2_ouster::Driver>(options);
 
+  node->configure();
+  node->activate();
+
   rclcpp::spin(node->get_node_base_interface());
 
   rclcpp::shutdown();
