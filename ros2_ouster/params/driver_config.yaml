@@ -51,3 +51,6 @@ ouster_driver:
     # PCL
     #
     proc_mask: IMG|PCL|IMU
+
+    # Autostart lifecycle node to active state
+    autostart: true
