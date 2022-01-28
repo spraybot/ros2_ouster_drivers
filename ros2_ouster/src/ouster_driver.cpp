@@ -44,6 +44,7 @@ OusterDriver::OusterDriver(
   this->declare_parameter("sensor_frame", std::string("laser_sensor_frame"));
   this->declare_parameter("laser_frame", std::string("laser_data_frame"));
   this->declare_parameter("imu_frame", std::string("imu_data_frame"));
+  this->declare_parameter("publish_tf", true);
   this->declare_parameter("use_system_default_qos", false);
   this->declare_parameter("proc_mask", std::string("IMG|PCL|IMU|SCAN"));
 
@@ -64,6 +65,7 @@ void OusterDriver::onConfigure()
   _laser_sensor_frame = get_parameter("sensor_frame").as_string();
   _laser_data_frame = get_parameter("laser_frame").as_string();
   _imu_data_frame = get_parameter("imu_frame").as_string();
+  _publish_tf = get_parameter("publish_tf").as_bool();
   _use_system_default_qos = get_parameter("use_system_default_qos").as_bool();
   _proc_mask = ros2_ouster::toProcMask(get_parameter("proc_mask").as_string());
 
@@ -209,7 +211,7 @@ void OusterDriver::onShutdown()
 void OusterDriver::broadcastStaticTransforms(
   const ouster::sensor::sensor_info & mdata)
 {
-  if (_tf_b) {
+  if (_publish_tf && _tf_b) {
     std::vector<geometry_msgs::msg::TransformStamped> transforms;
     transforms.push_back(
       toMsg(
