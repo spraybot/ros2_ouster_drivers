@@ -1,10 +1,10 @@
 ouster_driver:
   ros__parameters:
-    lidar_ip: "169.254.12.70"
+    lidar_ip: "os-122148000285.local"
     computer_ip: ""
-    lidar_mode: "1024x10"
+    lidar_mode: "1024x20"
     imu_port: 7503
-    lidar_port: 7502
+    lidar_port: 7582
     sensor_frame: laser_sensor_frame
     laser_frame: lidar_link
     imu_frame: imu_data_frame
@@ -50,7 +50,7 @@ ouster_driver:
     # IMG|PCL|IMU|SCAN
     # PCL
     #
-    proc_mask: IMG|PCL|IMU
+    proc_mask: PCL
 
     # Autostart lifecycle node to active state
     autostart: true
