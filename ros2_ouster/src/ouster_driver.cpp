@@ -200,6 +200,17 @@ void OusterDriver::onCleanup()
 
 void OusterDriver::onShutdown()
 {
+  try {
+    ouster::sensor::sensor_config sensor_config{
+      .operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY
+      };
+    ouster::sensor::set_config(_lidar_config.lidar_ip, sensor_config, 0);
+    
+  } catch (const OusterDriverException & e) {
+    RCLCPP_FATAL(this->get_logger(), "Exception thrown: (%s)", e.what());
+    exit(-1);
+  }
+
   _process_timer->cancel();
   _process_timer.reset();
   _tf_b.reset();
